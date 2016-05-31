@@ -34,7 +34,9 @@ evalPropSingle prog a = case ta of
         where
           ta = getRHS a prog
 
-(<-) p ps 
+
+(<-) :: Substitution ->  
+e (<-) (x,a) =
 
 
 
