@@ -1,1 +1,3 @@
 # FunctionalProgrammingProject 
+
+Hoi gristiaan
