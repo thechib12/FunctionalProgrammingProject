@@ -5,3 +5,5 @@ type Query = [Atom]
 
 evalProp :: Program -> Query -> Bool
 evalProp prog quer = True
+
+hoi sebastiaan
