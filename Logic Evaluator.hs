@@ -4,4 +4,4 @@ type Program = [Clause]
 type Query = [Atom]
 
 evalProp :: Program -> Query -> Bool
-evalProp
+evalProp prog quer = True
