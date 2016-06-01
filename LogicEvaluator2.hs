@@ -8,8 +8,8 @@ data Term = Var String
             deriving (Eq, Show)
 
 data Atom = Predicate Pred Term
-            deriving (Eq, Show)
-            
+            deriving (Eq, Show) 
+
 type Clause = (Atom, [ Atom ])
 type Program = [Clause]
 type Query = [Atom]
