@@ -5,7 +5,6 @@ data Atom = A0 |A1 |A2 |B0 |B1 |B2 |C0 |C1 |D deriving (Eq, Show)
 type Clause = (Atom, [ Atom ])
 type Program = [Clause]
 type Query = [Atom]
-type Predicate = Atom Term
 type Substitution = (Term,Term)
 
 data Term = Var String
@@ -23,7 +22,6 @@ evalProp prog (a:query)
         | evalPropSingle prog a == False = False
         | otherwise                      = evalProp prog query
 
-
 evalPropSingle :: Program -> Atom -> Bool
 evalPropSingle prog a = case ta of
         Nothing             -> False
@@ -33,16 +31,6 @@ evalPropSingle prog a = case ta of
         Just xs             -> evalProp prog xs
         where
           ta = getRHS a prog
-
-
-(<-) :: Substitution ->  
-e (<-) (x,a) =
-
-
-
-
-
-
 
 testProgram = [ (A0, []),
                 (A1, []),

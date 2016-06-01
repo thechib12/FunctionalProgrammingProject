@@ -1,11 +1,12 @@
 import Data.Maybe
 
 
-data Atom = A0 |A1 |A2 |B0 |B1 |B2 |C0 |C1 |D deriving (Eq, Show)
+data Atom = A0 | A1 | A2 | B0 | B1 | B2 | C0 | C1 | D | Predicate Term
+            deriving (Eq, Show)
 type Clause = (Atom, [ Atom ])
 type Program = [Clause]
 type Query = [Atom]
-type Predicate = Atom Term
+
 type Substitution = (Term,Term)
 
 data Term = Var String
@@ -35,17 +36,11 @@ evalPropSingle prog a = case ta of
           ta = getRHS a prog
 
 
-(<-) :: Substitution ->
-e (<-) (x,a) =
+class Substitute a where
+  (<-) :: a -> Substitution -> a
 
+instance Substitute Term where
+  (Var x)   (<-) (x,a)  = (Const a)
+  (Const a) (<-) (x,a)  = (Const a)
 
-
-testProgram = [ (A0, []),
-                (A1, []),
-                (A2, []),
-                (B0, [A0, A1]),
-                (B1, [A1, A2]),
-                (B2, [A1, A2, D]),
-                (C0, [B0, B1]),
-                (C1, [B0, B1, B2])
-              ]
+instance Substitute
