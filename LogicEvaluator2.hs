@@ -42,3 +42,10 @@ renameRHS ((Predicate a (Var t)):xs) ys
         | otherwise                     = [(Predicate a (Var t))] ++ (renameRHS xs ys)
 
 renameTest = rename ((Predicate A0 (Var "Y")), [(Predicate B0 (Var "X")),(Predicate B1 (Var "Y"))]) [(Var "X")]
+
+unify:: Atom -> Atom -> [Substitution]
+unify (Predicate p (Const a)) (Predicate q (Const b)) = []
+unify (Predicate p (Const a)) (Predicate q (Var x)) | p == q =  [(Var x, Const a)]
+                                                    | otherwise = []
+unity (Predicate p (Var x)) (Predicate q (Var y))   | p == q = [(Var X, Var Y), (Var Y, Var X)]
+                                                    | otherwise = []
