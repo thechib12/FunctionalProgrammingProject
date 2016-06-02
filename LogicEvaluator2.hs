@@ -49,16 +49,41 @@ unify (Predicate p (Const a)) (Predicate q (Var x))
             | p == q                                  = [(Var x, Const a)]
             | otherwise                               = []
 unify (Predicate p (Var x)) (Predicate q (Var y))
-            | p == q && x == y                        = [(Var x, Var y)]
+            | x == y && p == q                        = [(Var x, Var y)]
             | p == q                                  = [(Var x, Var y), (Var y, Var x)]
             | otherwise                               = []
 unify (Predicate p (Var x)) (Predicate q (Const a))
             | p == q                                  = [(Var x, Const a)]
             | otherwise                               = []
 
+testUnify = unify (Predicate A0 (Var "X")) (Predicate A0 (Var "X"))
 
 evalOne :: Program -> Query -> Bool
-evalOne prog (x:xs) = case x of
-        Const a
+evalOne prog [] = True
+evalOne prog (a:query)
+        | evalOneSingle prog a == False  = False
+        | otherwise                      = evalOne prog query
 
-        Var a
+
+getRHS :: Atom -> Program -> Maybe [Atom]
+getRHS n []             = Nothing
+getRHS n ((x,ys):xs)
+        | n == x        = Just ys
+        | otherwise     = getRHS n xs
+
+evalOneSingle :: Program -> Atom -> Bool
+evalOneSingle prog a = case ta of
+      Nothing       -> False
+
+      Just []       -> True
+
+      Just xs       -> evalOne prog xs
+    where
+      ta = getRHS a prog
+
+testProgram = [((Predicate A0 (Const "a")),[]),
+              ((Predicate A0 (Const "b")),[]),
+              ((Predicate A0 (Const "c")),[]),
+              ((Predicate A1 (Const "a")),[]),
+              ((Predicate A1 (Const "b")),[]),
+              ((Predicate A2 (Const "a")),[(Predicate A0 (Const "a")),(Predicate A1 (Const "a"))])]
