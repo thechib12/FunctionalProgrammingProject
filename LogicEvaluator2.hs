@@ -49,8 +49,16 @@ unify (Predicate p (Const a)) (Predicate q (Var x))
             | p == q                                  = [(Var x, Const a)]
             | otherwise                               = []
 unify (Predicate p (Var x)) (Predicate q (Var y))
+            | p == q && x == y                        = [(Var x, Var y)]
             | p == q                                  = [(Var x, Var y), (Var y, Var x)]
             | otherwise                               = []
 unify (Predicate p (Var x)) (Predicate q (Const a))
             | p == q                                  = [(Var x, Const a)]
             | otherwise                               = []
+
+
+evalOne :: Program -> Query -> Bool
+evalOne prog (x:xs) = case x of
+        Const a
+
+        Var a
