@@ -45,7 +45,12 @@ renameTest = rename ((Predicate A0 (Var "Y")), [(Predicate B0 (Var "X")),(Predic
 
 unify:: Atom -> Atom -> [Substitution]
 unify (Predicate p (Const a)) (Predicate q (Const b)) = []
-unify (Predicate p (Const a)) (Predicate q (Var x)) | p == q =  [(Var x, Const a)]
-                                                    | otherwise = []
-unity (Predicate p (Var x)) (Predicate q (Var y))   | p == q = [(Var X, Var Y), (Var Y, Var X)]
-                                                    | otherwise = []
+unify (Predicate p (Const a)) (Predicate q (Var x))
+            | p == q                                  = [(Var x, Const a)]
+            | otherwise                               = []
+unify (Predicate p (Var x)) (Predicate q (Var y))
+            | p == q                                  = [(Var x, Var y), (Var y, Var x)]
+            | otherwise                               = []
+unify (Predicate p (Var x)) (Predicate q (Const a))
+            | p == q                                  = [(Var x, Const a)]
+            | otherwise                               = []
