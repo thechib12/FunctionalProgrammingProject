@@ -98,7 +98,7 @@ evalOne prog query
 
 evalOneBool prog (x:query)
       | u /= []     =
-        
+
 
       | otherwise   = False
     where
