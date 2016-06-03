@@ -58,11 +58,14 @@ unify (Predicate p (Var x)) (Predicate q (Const a))
 
 testUnify = unify (Predicate A0 (Var "X")) (Predicate A0 (Var "X"))
 
-evalOne :: Program -> Query -> Bool
-evalOne prog [] = True
-evalOne prog (a:query)
-        | evalOneSingle prog a == False  = False
-        | otherwise                      = evalOne prog query
+-- evalOne :: Program -> Query -> Bool
+-- evalOne prog [] = True
+-- evalOne prog (a:query) = case a of
+--   Predicate p (Const b)
+--         | evalOneSingle prog a == False  = False
+--         | otherwise                      = evalOne prog query
+--   Precicate q (Var x)
+--         |
 
 
 getRHS :: Atom -> Program -> Maybe [Atom]
@@ -71,15 +74,35 @@ getRHS n ((x,ys):xs)
         | n == x        = Just ys
         | otherwise     = getRHS n xs
 
-evalOneSingle :: Program -> Atom -> Bool
-evalOneSingle prog a = case ta of
-      Nothing       -> False
+-- evalOneSingle :: Program -> Atom -> Bool
+-- evalOneSingle prog a = case ta of
+--       Nothing       -> False
+--
+--       Just []       -> True
+--
+--       Just xs       -> evalOne prog xs
+--     where
+--       ta = getRHS a prog
 
-      Just []       -> True
+substituteRHS :: Substitution -> [Atom] -> [Atom]
+substituteRHS sub []      = []
+substituteRHS sub (x:xs)  = [u] ++ (substituteRHS sub xs)
+      where
+        u = (<==) x sub
 
-      Just xs       -> evalOne prog xs
-    where
-      ta = getRHS a prog
+findRule:: Program -> Atom -> Program
+findRule [] _ = []
+findRule (((Predicate p x), rules):xs) (Predicate q z) = case z of
+      Var u
+        | q == p              -> [((Predicate p x), rules  n)] ++ (findRule xs (Predicate q z))
+        | otherwise           -> findRule xs (Predicate q z)
+
+      Const a
+        | q == p && x == z    -> [((Predicate p x), rules)] ++ (findRule xs (Predicate q z))
+        | otherwise           -> findRule xs (Predicate q z)
+
+
+
 
 testProgram = [((Predicate A0 (Const "a")),[]),
               ((Predicate A0 (Const "b")),[]),
@@ -87,3 +110,5 @@ testProgram = [((Predicate A0 (Const "a")),[]),
               ((Predicate A1 (Const "a")),[]),
               ((Predicate A1 (Const "b")),[]),
               ((Predicate A2 (Const "a")),[(Predicate A0 (Const "a")),(Predicate A1 (Const "a"))])]
+testRHS = [(Predicate A1 (Var "X")), (Predicate A2 (Var "Y"))]
+testSub = (Var "X", Const "a")
