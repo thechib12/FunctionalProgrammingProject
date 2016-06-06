@@ -82,6 +82,16 @@ hasEmptyList (((Predicate p x), rules):xs)
         | rules == [] = True
         | otherwise = False
 
+getRulesOfProgram :: Program -> [Atom]
+
+
+
+
+getTerminalConstants :: Program -> [Atom]
+
+
+
+
 findRule:: Program -> Atom -> Program
 findRule [] _ = []
 findRule (((Predicate p x), rules):xs) (Predicate q z) = case x of
@@ -92,6 +102,28 @@ findRule (((Predicate p x), rules):xs) (Predicate q z) = case x of
       Const a
         | q == p && x == z    -> [((Predicate p x), rules)] ++ (findRule xs (Predicate q z))
         | otherwise           -> findRule xs (Predicate q z)
+
+evaluateAtom :: Program -> Atom -> Either [Atom] Bool
+evaluateAtom prog atom = case atom of
+      (Predicate p (Const a))
+        | terminationrule == True   -> Right True
+        | u == []                   -> Right False
+        | otherwise                 -> Left v
+          where
+            v = getRuleProgram u
+
+      (Predicate q (Var x))
+        | terminationrule == True   -> Left w
+        | u == []                   -> Right False
+        | otherwise                 -> Left v
+          where
+            v = getRuleProgram u
+            w = getTerminalConstants u
+    where
+      u = findRule prog atom
+      terminationrule = hasEmptyList u
+
+
 --
 -- evalOne :: Program -> Query -> Either Bool [Substitution]
 -- evalOne prog query
