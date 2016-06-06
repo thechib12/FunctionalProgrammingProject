@@ -13,11 +13,19 @@ data Term = Var String
 data Atom = Predicate Pred Term
             deriving (Eq)
 
-data AtomTree = AtomNode Op Atom [AtomTree]
+data AtomTree = AtomNode OpType Atom [AtomTree]
             deriving (Show)
+
+data OpType = Union
+            | Inter
+
 
 instance Show Atom where
   show (Predicate p t ) = show(p) ++ " " ++  show(t)
+
+instance Show OpType where
+  show (Union) = " u"
+  show (Inter) = " n"
 
 -- Type declarations
 type Op = String
@@ -137,9 +145,9 @@ evaluateAtom prog atom = case atom of
       terminationrule = hasEmptyList u
 
 
-makeTree prog query atom = AtomNode "&&" atom (map (makeTreeH prog) query)
+makeTree prog query atom = AtomNode Inter atom (map (makeTreeH prog) query)
 
-makeTreeH prog atom = AtomNode "||" atom v
+makeTreeH prog atom = AtomNode Union atom v
   where
     u = findRule prog atom
     v = findRuleTree prog u
@@ -156,6 +164,10 @@ instance PPTree AtomTree where
 findRuleTree :: Program -> Program -> [AtomTree]
 findRuleTree prog [] = []
 findRuleTree prog ((x,xs):ys)  = [makeTree prog xs x] ++ (findRuleTree prog ys)
+
+
+
+
 
 --
 -- evalOne :: Program -> Query -> Either Bool [Substitution]
@@ -201,7 +213,7 @@ testProgram = [((Predicate A0 (Const "b")),[]),
               ((Predicate A0 (Const "c")),[]),
               ((Predicate A1 (Const "a")),[]),
               ((Predicate A1 (Const "b")),[]),
-              ((Predicate A2 (Var "X")),[(Predicate A0 (Var "X")),(Predicate A1 (Var "X"))])]
+              ((Predicate A2 (Var "X")),[(Predicate A0 (Var "X")),(Predicate A1 (Var "Y")), (Predicate A1 (Var "Y"))])]
 testRHS = [(Predicate A1 (Var "X")), (Predicate A2 (Var "Y"))]
 testQuery = [(Predicate A2 (Var "X")) ]
 testSub = (Var "X", Const "a")
