@@ -70,8 +70,6 @@ unify (Predicate p (Var x)) (Predicate q (Const a))
             | otherwise                               = []
 
 
-
-
 getRHS :: Atom -> Program -> Maybe [Atom]
 getRHS n []             = Nothing
 getRHS n ((x,ys):xs)
