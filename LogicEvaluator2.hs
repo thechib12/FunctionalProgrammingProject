@@ -1,5 +1,7 @@
 import Data.Maybe
+import Data.Either
 
+-- Data types
 data Pred = A0 | A1 | A2 | B0 | B1 | B2 | C0 | C1 | D
             deriving (Eq, Show)
 
@@ -10,28 +12,40 @@ data Term = Var String
 data Atom = Predicate Pred Term
             deriving (Eq, Show)
 
+-- Type declarations
 type Clause = (Atom, [ Atom ])
 type Program = [Clause]
 type Query = [Atom]
 type Substitution = (Term,Term)
 
-predList = [(Var )]
+-- Type class Substitute and substitute functions
 class Substitute a where
-  (<==) :: a -> Substitution -> a
+  (<==) :: Substitution -> a -> a
 
 instance Substitute Term where
-  (<==) (Var x) (Var y, Const a)
-                  | x == y          = (Const a)
-                  | otherwise       = (Var x)
-  (<==) (Const a) (Var x,Const b)   = (Const a)
+  (<==) (Var y, Const a) (Var x)
+                  | x == y            = (Const a)
+                  | otherwise         = (Var x)
+  (<==) (Var x,Const b) (Const a)     = (Const a)
 
 instance Substitute Atom where
-  (<==) (Predicate p t) (Var y, Const a) = (Predicate p ((<==) t (Var y, Const a)))
+  (<==) sub (Predicate p t)           = (Predicate p ((<==) sub t))
 
-substituteTest = (<==) (Predicate A0 (Var "X")) (Var "X", Const "a")
+substituteRHS :: Substitution -> [Atom] -> [Atom]
+substituteRHS sub xs                  = u
+      where
+        u = map ((<==) sub) xs
 
-rename :: Clause -> [Term] -> Clause
-rename ((Predicate a (Var t)),xs) ys
+substituteClause :: Substitution -> Clause -> Clause
+substituteClause sub (atom,atoms)     = (u,v)
+    where
+      u = (<==) sub atom
+      v = map ((<==) sub) atoms
+
+
+-- Rename functions
+renameClause :: Clause -> [Term] -> Clause
+renameClause ((Predicate a (Var t)),xs) ys
         | elem (Var t) ys == True       = ((Predicate a (Var (t ++ "1"))), (renameRHS xs ys))
         | otherwise                     = ((Predicate a (Var t) ), (renameRHS xs ys))
 
@@ -41,8 +55,7 @@ renameRHS ((Predicate a (Var t)):xs) ys
         | elem (Var t) ys == True       = [(Predicate a (Var (t ++ "1")))] ++ (renameRHS xs ys)
         | otherwise                     = [(Predicate a (Var t))] ++ (renameRHS xs ys)
 
-renameTest = rename ((Predicate A0 (Var "Y")), [(Predicate B0 (Var "X")),(Predicate B1 (Var "Y"))]) [(Var "X")]
-
+-- Unifying functions
 unify:: Atom -> Atom -> [Substitution]
 unify (Predicate p (Const a)) (Predicate q (Const b)) = []
 unify (Predicate p (Const a)) (Predicate q (Var x))
@@ -56,16 +69,7 @@ unify (Predicate p (Var x)) (Predicate q (Const a))
             | p == q                                  = [(Var x, Const a)]
             | otherwise                               = []
 
-testUnify = unify (Predicate A0 (Var "X")) (Predicate A0 (Var "X"))
 
--- evalOne :: Program -> Query -> Bool
--- evalOne prog [] = True
--- evalOne prog (a:query) = case a of
---   Predicate p (Const b)
---         | evalOneSingle prog a == False  = False
---         | otherwise                      = evalOne prog query
---   Precicate q (Var x)
---         |
 
 
 getRHS :: Atom -> Program -> Maybe [Atom]
@@ -74,41 +78,63 @@ getRHS n ((x,ys):xs)
         | n == x        = Just ys
         | otherwise     = getRHS n xs
 
--- evalOneSingle :: Program -> Atom -> Bool
--- evalOneSingle prog a = case ta of
---       Nothing       -> False
---
---       Just []       -> True
---
---       Just xs       -> evalOne prog xs
---     where
---       ta = getRHS a prog
 
-substituteRHS :: Substitution -> [Atom] -> [Atom]
-substituteRHS sub []      = []
-substituteRHS sub (x:xs)  = [u] ++ (substituteRHS sub xs)
-      where
-        u = (<==) x sub
 
 findRule:: Program -> Atom -> Program
 findRule [] _ = []
-findRule (((Predicate p x), rules):xs) (Predicate q z) = case z of
+findRule (((Predicate p x), rules):xs) (Predicate q z) = case x of
       Var u
-        | q == p              -> [((Predicate p x), rules  n)] ++ (findRule xs (Predicate q z))
+        | q == p              -> [((Predicate p x), rules)] ++ ( findRule xs (Predicate q z))
         | otherwise           -> findRule xs (Predicate q z)
 
       Const a
         | q == p && x == z    -> [((Predicate p x), rules)] ++ (findRule xs (Predicate q z))
         | otherwise           -> findRule xs (Predicate q z)
 
+evalOne :: Program -> Query -> Either Bool [Substitution]
+evalOne prog query
+      | checkforVar query == True   = Right (evalOneSub prog query)
+      | otherwise                   = Left (evalOneBool prog query)
+
+evalOneBool prog (x:query)
+      | u /= []     =
+        
+
+      | otherwise   = False
+    where
+      u = findRule prog x
+
+boolHelper prog clause atom = case atom of
+  (Predicate p (Var x))
+    |
+
+  Predicate q (Const a)
 
 
 
-testProgram = [((Predicate A0 (Const "a")),[]),
-              ((Predicate A0 (Const "b")),[]),
+evalOneSub prog query = [(Const "a",Var "X")]
+
+
+checkforVar :: Query -> Bool
+checkforVar [] = False
+checkforVar (x:xs) = case x of
+      (Predicate p (Var y)) -> True
+      (Predicate q (Const a)) -> checkforVar xs
+
+-- Tests
+
+substituteTest = (<==) (Var "X", Const "a") (Predicate A0 (Var "X"))
+
+testUnify = unify (Predicate A0 (Var "X")) (Predicate A0 (Var "X"))
+
+renameTest = renameClause ((Predicate A0 (Var "Y")), [(Predicate B0 (Var "X")),(Predicate B1 (Var "Y"))]) [(Var "X")]
+
+testProgram = [((Predicate A0 (Const "b")),[]),
+              ((Predicate A0 (Const "a")),[]),
               ((Predicate A0 (Const "c")),[]),
               ((Predicate A1 (Const "a")),[]),
               ((Predicate A1 (Const "b")),[]),
-              ((Predicate A2 (Const "a")),[(Predicate A0 (Const "a")),(Predicate A1 (Const "a"))])]
+              ((Predicate A2 (Var "X")),[(Predicate A0 (Var "X")),(Predicate A1 (Var "X"))])]
 testRHS = [(Predicate A1 (Var "X")), (Predicate A2 (Var "Y"))]
+testQuery = [(Predicate A1 (Const "a")), (Predicate A2 (Const "b"))]
 testSub = (Var "X", Const "a")
