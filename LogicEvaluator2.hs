@@ -1,8 +1,9 @@
 import Data.Maybe
 import Data.Either
+import FPPrac.Trees
 
 -- Data types
-data Pred = A0 | A1 | A2 | B0 | B1 | B2 | C0 | C1 | D
+data Pred = A0 | A1 | A2 | B0 | B1 | B2 | C0 | C1 | D | Begin
             deriving (Eq, Show)
 
 data Term = Var String
@@ -10,9 +11,16 @@ data Term = Var String
             deriving (Eq, Show)
 
 data Atom = Predicate Pred Term
-            deriving (Eq, Show)
+            deriving (Eq)
+
+data AtomTree = AtomNode Op Atom [AtomTree]
+            deriving (Show)
+
+instance Show Atom where
+  show (Predicate p t ) = show(p) ++ " " ++  show(t)
 
 -- Type declarations
+type Op = String
 type Clause = (Atom, [ Atom ])
 type Program = [Clause]
 type Query = [Atom]
@@ -85,22 +93,21 @@ hasEmptyList (((Predicate p x), rules):xs)
 getRuleOfClause :: Clause -> [Atom]
 getRuleOfClause (x,xs) = xs
 
-getRulesOfProgram :: Program -> [Atom]
+getRulesOfProgram :: Program -> [[Atom]]
 getRulesOfProgram xs = map (getRuleOfClause) xs
 
 
-
-getTerminalConstants :: Program -> [Atom]
+getTerminalConstants :: Program -> [[Atom]]
 getTerminalConstants [] = []
 getTerminalConstants (((Predicate p x), rules):xs)
-        | rules == [] = [(Predicate p x)] ++ getTerminalConstants xs
+        | rules == [] = [(Predicate p x)] : getTerminalConstants xs
         | otherwise   = getTerminalConstants xs
 
 
 
 findRule:: Program -> Atom -> Program
 findRule [] _ = []
-findRule (((Predicate p x), rules):xs) (Predicate q z) = case x of
+findRule (((Predicate p x), rules):xs) (Predicate q z) = case z of
       Var u
         | q == p              -> [((Predicate p x), rules)] ++ ( findRule xs (Predicate q z))
         | otherwise           -> findRule xs (Predicate q z)
@@ -109,26 +116,46 @@ findRule (((Predicate p x), rules):xs) (Predicate q z) = case x of
         | q == p && x == z    -> [((Predicate p x), rules)] ++ (findRule xs (Predicate q z))
         | otherwise           -> findRule xs (Predicate q z)
 
-evaluateAtom :: Program -> Atom -> Either [Atom] Bool
+evaluateAtom :: Program -> Atom -> Either [[Atom]] Bool
 evaluateAtom prog atom = case atom of
       (Predicate p (Const a))
         | terminationrule == True   -> Right True
         | u == []                   -> Right False
         | otherwise                 -> Left v
           where
-            v = getRuleProgram u
+            v = getRulesOfProgram u
 
       (Predicate q (Var x))
         | terminationrule == True   -> Left w
         | u == []                   -> Right False
         | otherwise                 -> Left v
           where
-            v = getRuleProgram u
+            v = getRulesOfProgram u
             w = getTerminalConstants u
     where
       u = findRule prog atom
       terminationrule = hasEmptyList u
 
+
+makeTree prog query atom = AtomNode "&&" atom (map (makeTreeH prog) query)
+
+makeTreeH prog atom = AtomNode "||" atom v
+  where
+    u = findRule prog atom
+    v = findRuleTree prog u
+
+class PPTree a where
+  ppTree :: a -> RoseTree
+
+instance PPTree AtomTree where
+  ppTree (AtomNode op atom xs) = RoseNode (show(atom) ++ show(op)) u
+    where
+      u = map (ppTree) xs
+
+
+findRuleTree :: Program -> Program -> [AtomTree]
+findRuleTree prog [] = []
+findRuleTree prog ((x,xs):ys)  = [makeTree prog xs x] ++ (findRuleTree prog ys)
 
 --
 -- evalOne :: Program -> Query -> Either Bool [Substitution]
@@ -176,5 +203,5 @@ testProgram = [((Predicate A0 (Const "b")),[]),
               ((Predicate A1 (Const "b")),[]),
               ((Predicate A2 (Var "X")),[(Predicate A0 (Var "X")),(Predicate A1 (Var "X"))])]
 testRHS = [(Predicate A1 (Var "X")), (Predicate A2 (Var "Y"))]
-testQuery = [(Predicate A1 (Const "a")), (Predicate A2 (Const "b"))]
+testQuery = [(Predicate A2 (Var "X")) ]
 testSub = (Var "X", Const "a")
