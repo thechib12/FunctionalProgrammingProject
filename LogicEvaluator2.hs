@@ -82,8 +82,11 @@ hasEmptyList (((Predicate p x), rules):xs)
         | rules == [] = True
         | otherwise = False
 
-getRulesOfProgram :: Program -> [Atom]
+getRuleOfClause :: Clause -> [Atom]
+getRuleOfClause (x,xs) = xs
 
+getRulesOfProgram :: Program -> [Atom]
+getRulesOfProgram xs = map (getRuleOfClause) xs
 
 
 
