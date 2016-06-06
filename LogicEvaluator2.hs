@@ -88,7 +88,10 @@ getRulesOfProgram :: Program -> [Atom]
 
 
 getTerminalConstants :: Program -> [Atom]
-
+getTerminalConstants [] = []
+getTerminalConstants (((Predicate p x), rules):xs)
+        | rules == [] = [(Predicate p x)] ++ getTerminalConstants xs
+        | otherwise   = getTerminalConstants xs
 
 
 
