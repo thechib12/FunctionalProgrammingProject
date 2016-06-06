@@ -78,7 +78,11 @@ getRHS n ((x,ys):xs)
         | n == x        = Just ys
         | otherwise     = getRHS n xs
 
-
+hasEmptyList:: Program -> Bool
+hasEmptyList [] = False
+hasEmptyList (((Predicate p x), rules):xs)
+        | rules == [] = True
+        | otherwise = False
 
 findRule:: Program -> Atom -> Program
 findRule [] _ = []
@@ -90,29 +94,29 @@ findRule (((Predicate p x), rules):xs) (Predicate q z) = case x of
       Const a
         | q == p && x == z    -> [((Predicate p x), rules)] ++ (findRule xs (Predicate q z))
         | otherwise           -> findRule xs (Predicate q z)
-
-evalOne :: Program -> Query -> Either Bool [Substitution]
-evalOne prog query
-      | checkforVar query == True   = Right (evalOneSub prog query)
-      | otherwise                   = Left (evalOneBool prog query)
-
-evalOneBool prog (x:query)
-      | u /= []     =
-
-
-      | otherwise   = False
-    where
-      u = findRule prog x
-
-boolHelper prog clause atom = case atom of
-  (Predicate p (Var x))
-    |
-
-  Predicate q (Const a)
-
-
-
-evalOneSub prog query = [(Const "a",Var "X")]
+--
+-- evalOne :: Program -> Query -> Either Bool [Substitution]
+-- evalOne prog query
+--       | checkforVar query == True   = Right (evalOneSub prog query)
+--       | otherwise                   = Left (evalOneBool prog query)
+--
+-- evalOneBool prog (x:query)
+--       | u /= []     =
+--
+--
+--       | otherwise   = False
+--     where
+--       u = findRule prog x
+--
+-- boolHelper prog clause atom = case atom of
+--   (Predicate p (Var x))
+--     |
+--
+--   Predicate q (Const a)
+--
+--
+--
+-- evalOneSub prog query = [(Const "a",Var "X")]
 
 
 checkforVar :: Query -> Bool
