@@ -1,6 +1,7 @@
 import Data.Maybe
 import Data.Either
 import FPPrac.Trees
+import Data.List
 
 -- Data types
 data Pred = A0 | A1 | A2 | B0 | B1 | B2 | C0 | C1 | D | Begin
@@ -165,8 +166,22 @@ findRuleTree :: Program -> Program -> [AtomTree]
 findRuleTree prog [] = []
 findRuleTree prog ((x,xs):ys)  = [makeTree prog xs x] ++ (findRuleTree prog ys)
 
+deriveConstants :: AtomTree -> [Term]
+deriveConstants (AtomNode Union atom xs) = case atom of
+      (Predicate p (Var x)) -> u
+         where
+           u = concat (map deriveConstants xs)
+      (Predicate q (Const a)) -> [(Const a)]
 
-asdf
+deriveConstants (AtomNode Inter atom (xs)) = case atom of
+      (Predicate p (Var y)) -> u
+         where
+           x = head xs
+           z = tail xs
+           u = foldl (intersect) (deriveConstants x) (map deriveConstants z)
+      (Predicate q (Const a)) -> [(Const a)]
+
+evalOne
 
 
 --
