@@ -73,18 +73,19 @@ renameRHS ((Predicate a (Var t)):xs) ys
         | otherwise                     = [(Predicate a (Var t))] ++ (renameRHS xs ys)
 
 -- Unifying functions
-unify:: Atom -> Atom -> [Substitution]
-unify (Predicate p (Const a)) (Predicate q (Const b)) = []
-unify (Predicate p (Const a)) (Predicate q (Var x))
-            | p == q                                  = [(Var x, Const a)]
-            | otherwise                               = []
-unify (Predicate p (Var x)) (Predicate q (Var y))
-            | x == y && p == q                        = [(Var x, Var y)]
-            | p == q                                  = [(Var x, Var y), (Var y, Var x)]
-            | otherwise                               = []
-unify (Predicate p (Var x)) (Predicate q (Const a))
-            | p == q                                  = [(Var x, Const a)]
-            | otherwise                               = []
+unify:: Atom -> Program -> [Substitution]
+unify (Predicate p (Var x)) program
+        | u /= []         = zip (repeat (Var x)) u
+        | otherwise       = []
+  where
+    u = [ (Const y) | ((Predicate q (Const y)), atoms) <- program, p == q ]
+
+
+
+
+
+
+
 
 
 getRHS :: Atom -> Program -> Maybe [Atom]
@@ -207,20 +208,26 @@ deriveConstants (AtomNode Inter atom (xs)) = case atom of
 --
 -- evalOneSub prog query = [(Const "a",Var "X")]
 
-expandQuery:: Program -> Query -> [[Atom]]
-expandQuery prog query = map (expandAtom prog) query
+-- expands a query, which returns for every atom in the query a list of expanded atoms.
+expandQuery:: Program -> Program -> Query -> [[Atom]]
+expandQuery prog prog2 query = map (expandAtom prog prog2) query
 
-expandAtom:: Program -> Atom -> [Atom]
-expandAtom [] (Predicate q y) = []
-expandAtom ((Predicate p x, xs):xxs) (Predicate q y)
-        | (Predicate p x) == (Predicate q y) = (getVarRHS xs) ++ (expandAtom xxs (Predicate q y))
-        | otherwise = expandAtom xxs (Predicate q y)
+-- expands the atom. If the right LHS is found, then get the right RHS by expanding every atom
+expandAtom:: Program -> Program -> Atom -> [Atom]
+expandAtom [] _ (Predicate q y) = []
+expandAtom ((Predicate p x, xs):xxs) prog2 (Predicate q y) = case (Predicate p x) of
+  (Predicate p' (Const x'))
+    | p' == q                           -> [Predicate p x] ++ expandAtom xxs prog2 (Predicate q y)
+    | otherwise                          -> expandAtom xxs prog2 (Predicate q y)
+  _
+    | (Predicate p x) == (Predicate q y) -> (concat (expandQuery prog2 prog2 xs)) ++ (expandAtom xxs prog2 (Predicate q y))
+    | otherwise                          ->  expandAtom xxs prog2 (Predicate q y)
 
-getVarRHS:: [Atom] -> [Atom]
-getVarRHS [] = []
-getVarRHS (x:xs) = case x of
-  (Predicate p (Var x')) -> [x] ++ (getVarRHS xs)
-  _                       -> getVarRHS xs
+-- getVarRHS:: [Atom] -> Program-> [Atom]
+-- getVarRHS [] prog = []
+-- getVarRHS (x:xs) prog = case x of
+--   (Predicate p (Var x')) -> [x] ++ (getVarRHS (expandAtom prog prog xs) prog)
+--   _                       -> [x] ++ (getVarRHS xs prog)
 
 checkforVar :: Query -> Bool
 checkforVar [] = False
@@ -232,17 +239,43 @@ checkforVar (x:xs) = case x of
 
 substituteTest = (<==) (Var "X", Const "a") (Predicate A0 (Var "X"))
 
-testUnify = unify (Predicate A0 (Var "X")) (Predicate A0 (Var "X"))
+-- testUnify = unify (Predicate A0 (Var "X")) (Predicate A0 (Var "X"))
 
 renameTest = renameClause ((Predicate A0 (Var "Y")), [(Predicate B0 (Var "X")),(Predicate B1 (Var "Y"))]) [(Var "X")]
+--
+-- testProgram = [((Predicate A0 (Const "b")),[]),
+--               ((Predicate A0 (Const "a")),[]),
+--               ((Predicate A0 (Const "c")),[]),
+--               ((Predicate A1 (Const "a")),[]),
+--               ((Predicate A1 (Const "b")),[]),
+--               ((Predicate A2 (Var "X")),[(Predicate A0 (Var "X")),(Predicate A1 (Var "Y")), (Predicate A1 (Var "Y"))])]
+-- testRHS = [(Predicate A1 (Var "X")), (Predicate A2 (Var "Y"))]
+-- testQuery = [(Predicate A2 (Var "X")) ]
+-- testSub = (Var "X", Const "a")
+-- showQueryTree = showRoseTree (ppTree ( makeTree testProgram testQuery ( Predicate Begin ( Var "X"))))
+
+
 
 testProgram = [((Predicate A0 (Const "b")),[]),
               ((Predicate A0 (Const "a")),[]),
               ((Predicate A0 (Const "c")),[]),
               ((Predicate A1 (Const "a")),[]),
               ((Predicate A1 (Const "b")),[]),
-              ((Predicate A2 (Var "X")),[(Predicate A0 (Var "X")),(Predicate A1 (Var "Y")), (Predicate A1 (Var "Y"))])]
+              ((Predicate A2 (Var "X")),[(Predicate A0 (Var "X")), (Predicate A1 (Var "Y")), (Predicate A1 (Var "Y"))]),
+              ((Predicate B0 (Var "X")),[(Predicate A2 (Var "X")), (Predicate A0 (Const "a"))]),
+              ((Predicate B0 (Var "X")),[(Predicate A1 (Var "X"))]),
+              ((Predicate B2 (Var "X")),[(Predicate B1 (Var "X")), (Predicate B0 (Var "X"))]),
+              ((Predicate B1 (Const "a")),[])
+
+              ]
+
+-- b2 x -> [b1x, b0x] -> [b1a, a2x, a0a, a]
 testRHS = [(Predicate A1 (Var "X")), (Predicate A2 (Var "Y"))]
-testQuery = [(Predicate A2 (Var "X")) ]
+query1 = [(Predicate A1 (Var "X")), (Predicate A2 (Var "Y"))]
+query2 = [(Predicate B2 (Const "a"))]
+query3 = [(Predicate B2 (Const "c"))]
+query4 = [(Predicate B1 (Const "b"))]
+query5 = [(Predicate B2 (Var "X"))]
+query6 = [(Predicate B1 (Var "X")), (Predicate B2 (Var "X"))]
+query7 = [(Predicate B0 (Var "X"))]
 testSub = (Var "X", Const "a")
-showQueryTree = showRoseTree (ppTree ( makeTree testProgram testQuery ( Predicate Begin ( Var "X"))))
