@@ -209,25 +209,31 @@ deriveConstants (AtomNode Inter atom (xs)) = case atom of
 -- evalOneSub prog query = [(Const "a",Var "X")]
 
 -- expands a query, which returns for every atom in the query a list of expanded atoms.
-expandQuery:: Program -> Program -> Query -> [[Atom]]
+expandQuery:: Program -> Program -> Query -> [[[Atom]]]
 expandQuery prog prog2 query = map (expandAtom prog prog2) query
 
 -- expands the atom. If the right LHS is found, then get the right RHS by expanding every atom.
-expandAtom:: Program -> Program -> Atom -> [Atom]
+-- expandAtom:: Program -> Program -> Atom -> [[Atom]]
 expandAtom [] _ (Predicate q y) = []
 expandAtom ((Predicate p x, xs):xxs) prog2 (Predicate q y) = case (Predicate p x) of
-  (Predicate p' (Const x')) -> expandAtom xxs prog2 (Predicate q y)
+  (Predicate p' (Const x'))
+    | p == q  -> [[(Predicate p' (Const x'))]] ++ (expandAtom xxs prog2 (Predicate q y))
+    | otherwise ->  (expandAtom xxs prog2 (Predicate q y))
   (Predicate p1 (Var x1))
-    | p == q && (expandedHasEmptyList prog2 (Predicate p x))   ->  [(Predicate p x)] ++ (expandAtom xxs prog2  (Predicate q y))
-    | p == q                                                   ->  (concat (expandQuery prog2 prog2 xs)) ++ (expandAtom xxs prog2 (Predicate q y))
-    | otherwise             ->  expandAtom xxs prog2 (Predicate q y)
+    | p == q             ->   [(filterNonEmptyLists prog2 xs )] ++  (concat (expandQuery prog2 prog2 (filterEmptyLists prog2 xs))) ++ (expandAtom xxs prog2 (Predicate q y))
+    | otherwise          ->   expandAtom xxs prog2 (Predicate q y)
 
-
+-- [(Predicate p (Const (show(p)++ show (q))))]++
 filterEmptyLists:: Program -> [Atom] -> [Atom]
 filterEmptyLists _ [] = []
 filterEmptyLists prog (x:xs)
     | expandedHasEmptyList  prog x = filterEmptyLists prog  xs
     | otherwise = [x] ++ filterEmptyLists prog  xs
+filterNonEmptyLists:: Program -> [Atom] -> [Atom]
+filterNonEmptyLists _ [] = []
+filterNonEmptyLists prog (x:xs)
+    | not (expandedHasEmptyList prog x) = filterNonEmptyLists prog  xs
+    | otherwise = [x] ++ filterNonEmptyLists prog  xs
 
 expandedHasEmptyList:: Program -> Atom -> Bool
 expandedHasEmptyList [] _ = False
@@ -289,5 +295,5 @@ query3 = [(Predicate B2 (Const "c"))]
 query4 = [(Predicate B1 (Const "b"))]
 query5 = [(Predicate B2 (Var "X"))]
 query6 = [(Predicate B1 (Var "X")), (Predicate B2 (Var "X"))]
-query7 = [(Predicate B0 (Var "X"))]
+query7 = [(Predicate B0 (Var "X")), (Predicate B0 (Var "X"))]
 testSub = (Var "X", Const "a")
