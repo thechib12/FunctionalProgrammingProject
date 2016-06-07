@@ -207,8 +207,21 @@ deriveConstants (AtomNode Inter atom (xs)) = case atom of
 --
 -- evalOneSub prog query = [(Const "a",Var "X")]
 
-expand:: Program -> Query -> [Atom]
-expand ((p x, xs):xxs) (q y):ys  | (p x) == (q y) = getVarRHS
+expandQuery:: Program -> Query -> [[Atom]]
+expandQuery prog query = map (expandAtom prog) query
+
+expandAtom:: Program -> Atom -> [Atom]
+expandAtom [] (Predicate q y) = []
+expandAtom ((Predicate p x, xs):xxs) (Predicate q y)
+        | (Predicate p x) == (Predicate q y) = (getVarRHS xs) ++ (expandAtom xxs (Predicate q y))
+        | otherwise = expandAtom xxs (Predicate q y)
+
+getVarRHS:: [Atom] -> [Atom]
+getVarRHS [] = []
+getVarRHS (x:xs) = case x of
+  (Predicate p (Var x')) -> [x] ++ (getVarRHS xs)
+  _                       -> getVarRHS xs
+
 checkforVar :: Query -> Bool
 checkforVar [] = False
 checkforVar (x:xs) = case x of
