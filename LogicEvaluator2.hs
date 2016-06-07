@@ -178,11 +178,11 @@ deriveConstants (AtomNode Inter atom (xs)) = case atom of
          where
            x = head xs
            z = tail xs
-           
+
            u = foldl (intersect) (deriveConstants x) (map deriveConstants z)
       (Predicate q (Const a)) -> [(Const a)]
 
-getMapping (AtomNode Op ())
+
 --
 -- evalOne :: Program -> Query -> Either Bool [Substitution]
 -- evalOne prog query
@@ -207,7 +207,8 @@ getMapping (AtomNode Op ())
 --
 -- evalOneSub prog query = [(Const "a",Var "X")]
 
-
+expand:: Program -> Query -> [Atom]
+expand ((p x, xs):xxs) (q y):ys  | (p x) == (q y) = getVarRHS
 checkforVar :: Query -> Bool
 checkforVar [] = False
 checkforVar (x:xs) = case x of
