@@ -212,16 +212,27 @@ deriveConstants (AtomNode Inter atom (xs)) = case atom of
 expandQuery:: Program -> Program -> Query -> [[Atom]]
 expandQuery prog prog2 query = map (expandAtom prog prog2) query
 
--- expands the atom. If the right LHS is found, then get the right RHS by expanding every atom
+-- expands the atom. If the right LHS is found, then get the right RHS by expanding every atom.
 expandAtom:: Program -> Program -> Atom -> [Atom]
 expandAtom [] _ (Predicate q y) = []
 expandAtom ((Predicate p x, xs):xxs) prog2 (Predicate q y) = case (Predicate p x) of
-  (Predicate p' (Const x'))
-    | p' == q                           -> [Predicate p x] ++ expandAtom xxs prog2 (Predicate q y)
-    | otherwise                          -> expandAtom xxs prog2 (Predicate q y)
-  _
-    | (Predicate p x) == (Predicate q y) -> (concat (expandQuery prog2 prog2 xs)) ++ (expandAtom xxs prog2 (Predicate q y))
-    | otherwise                          ->  expandAtom xxs prog2 (Predicate q y)
+  (Predicate p' (Const x')) -> expandAtom xxs prog2 (Predicate q y)
+  (Predicate p1 (Var x1))
+    | p == q                -> ( (concat (expandQuery prog2 prog2 xs))) ++ (expandAtom xxs prog2   (Predicate q y))
+    | otherwise             ->  expandAtom xxs prog2 (Predicate q y)
+
+
+filterEmptyLists:: Program -> [Atom] -> [Atom]
+filterEmptyLists _ [] = []
+filterEmptyLists prog (x:xs)
+    | expandedHasEmptyList  prog x = filterEmptyLists prog  xs
+    | otherwise = [x] ++ filterEmptyLists prog  xs
+
+expandedHasEmptyList:: Program -> Atom -> Bool
+expandedHasEmptyList [] _ = False
+expandedHasEmptyList ((Predicate p x, xs):xxs) (Predicate q y)
+    | p == q && xs == [] = True
+    | otherwise = expandedHasEmptyList xxs (Predicate q y)
 
 -- getVarRHS:: [Atom] -> Program-> [Atom]
 -- getVarRHS [] prog = []
@@ -246,7 +257,7 @@ renameTest = renameClause ((Predicate A0 (Var "Y")), [(Predicate B0 (Var "X")),(
 -- testProgram = [((Predicate A0 (Const "b")),[]),
 --               ((Predicate A0 (Const "a")),[]),
 --               ((Predicate A0 (Const "c")),[]),
---               ((Predicate A1 (Const "a")),[]),
+--               ((Predicate A1 (Const 0"a")),[]),
 --               ((Predicate A1 (Const "b")),[]),
 --               ((Predicate A2 (Var "X")),[(Predicate A0 (Var "X")),(Predicate A1 (Var "Y")), (Predicate A1 (Var "Y"))])]
 -- testRHS = [(Predicate A1 (Var "X")), (Predicate A2 (Var "Y"))]
