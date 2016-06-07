@@ -14,21 +14,11 @@ data Term = Var String
 data Atom = Predicate Pred Term
             deriving (Eq)
 
-data AtomTree = AtomNode OpType Atom [AtomTree]
-            deriving (Show)
-
-data OpType = Union
-            | Inter
-
 instance Ord Term where
-  compare (Var x) (Var y) = compare x y
+  compare (Var x) (Var y)                                           = compare x y
 
 instance Show Atom where
-  show (Predicate p t ) = show(p) ++ " " ++  show(t)
-
-instance Show OpType where
-  show (Union) = " u"
-  show (Inter) = " n"
+  show (Predicate p t )                                             = show(p) ++ " " ++  show(t)
 
 -- Type declarations
 type Op = String
@@ -43,20 +33,20 @@ class Substitute a where
 
 instance Substitute Term where
   (<==) (Var y, Const a) (Var x)
-                  | x == y            = (Const a)
-                  | otherwise         = (Var x)
-  (<==) (Var x,Const b) (Const a)     = (Const a)
+                  | x == y                                          = (Const a)
+                  | otherwise                                       = (Var x)
+  (<==) (Var x,Const b) (Const a)                                   = (Const a)
 
 instance Substitute Atom where
-  (<==) sub (Predicate p t)           = (Predicate p ((<==) sub t))
+  (<==) sub (Predicate p t)                                         = (Predicate p ((<==) sub t))
 
 substituteRHS :: Substitution -> [Atom] -> [Atom]
-substituteRHS sub xs                  = u
+substituteRHS sub xs                                                = u
       where
         u = map ((<==) sub) xs
 
 substituteClause :: Substitution -> Clause -> Clause
-substituteClause sub (atom,atoms)     = (u,v)
+substituteClause sub (atom,atoms)                                   = (u,v)
     where
       u = (<==) sub atom
       v = map ((<==) sub) atoms
@@ -65,14 +55,14 @@ substituteClause sub (atom,atoms)     = (u,v)
 -- Rename functions
 renameClause :: Clause -> [Term] -> Clause
 renameClause ((Predicate a (Var t)),xs) ys
-        | elem (Var t) ys == True       = ((Predicate a (Var (t ++ "1"))), (renameRHS xs ys))
-        | otherwise                     = ((Predicate a (Var t) ), (renameRHS xs ys))
+        | elem (Var t) ys == True                                   = ((Predicate a (Var (t ++ "1"))), (renameRHS xs ys))
+        | otherwise                                                 = ((Predicate a (Var t) ), (renameRHS xs ys))
 
 renameRHS :: [Atom] -> [Term] -> [Atom]
 renameRHS [] ys = []
 renameRHS ((Predicate a (Var t)):xs) ys
-        | elem (Var t) ys == True       = [(Predicate a (Var (t ++ "1")))] ++ (renameRHS xs ys)
-        | otherwise                     = [(Predicate a (Var t))] ++ (renameRHS xs ys)
+        | elem (Var t) ys == True                                   = [(Predicate a (Var (t ++ "1")))] ++ (renameRHS xs ys)
+        | otherwise                                                 = [(Predicate a (Var t))] ++ (renameRHS xs ys)
 
 -- Unifying functions
 unify::  Program -> Atom -> [Substitution]
@@ -82,50 +72,39 @@ unify program (Predicate p (Var x))
   where
     u = [ (Const y) | ((Predicate q (Const y)), atoms) <- program, p == q ]
 
-evaluator :: Program -> Query -> [Atom]
-evaluator program [] = []
-evaluator program (q:query)
-    | u /= []               = []++(evaluator program query)
-    | otherwise             = [q] ++ (evaluator program query)
-      where
-        u = evaluatorAtom program q
-
-evaluatorAtom :: Program -> Atom -> [Atom]
-evaluatorAtom program atom = [ btom | (btom,btoms)<- program, btom == atom , btoms ==[]]
-
 evalOne :: Program -> Query -> Either Bool [Substitution]
 evalOne program query
     | checkforVar query == True         = Right (nub u)
     | otherwise                         = Left v
     where
       u = evalSub program query (expand program query)
-      replace = (replaceConst query 1)
-      w = evalSub program replace (expand program replace)
+      withVars = (replaceConst query 1)
+      w = evalSub program withVars (expand program withVars)
       v = evalBool program (getSubs query 1) (w)
 
 getSubs :: Query -> Int -> [Substitution]
 getSubs [] number = []
 getSubs ((Predicate p (Const a)):query) number = (Var ("X" ++ show(number)), Const a) : (getSubs query (number+1))
 
+replaceConst :: Query -> Int -> Query
 replaceConst [] number = []
 replaceConst ((Predicate p (Const a)):query) number = (Predicate p (Var ("X" ++ show(number) ))) : (replaceConst query (number+1))
 
 evalBool :: Program -> [Substitution] -> [Substitution] -> Bool
 evalBool program [] w = True
 evalBool program (s:sub) w
-  | elem s w == True             = evalBool program sub w
-  | otherwise                    = False
-
+    | elem s w == True             = evalBool program sub w
+    | otherwise                    = False
 
 evalSub :: Program -> Query -> [Query] -> [Substitution]
 evalSub program originalquery [] = []
 evalSub program originalquery (q:queries)
-  | w /= []                         = w ++ (evalSub program originalquery queries)
-  | otherwise                       = evalSub program  originalquery queries
-  where
-    u = getRestVars originalquery (sortQueryVars $ filterVars q)
-    v = intersectSubstitutions program q
-    w = removeOtherVars (u) v
+    | w /= []                         = w ++ (evalSub program originalquery queries)
+    | otherwise                       = evalSub program  originalquery queries
+    where
+      u = getRestVars originalquery (sortQueryVars $ filterVars q)
+      v = intersectSubstitutions program q
+      w = removeOtherVars (u) v
 
 removeOtherVars :: [Term] -> [Substitution] ->  [Substitution]
 removeOtherVars terms []                = []
@@ -133,47 +112,49 @@ removeOtherVars terms (s:subs)
     | elem (fst(s)) terms == True       = removeOtherVars terms subs
     | otherwise                         = s : (removeOtherVars terms (subs))
 
-
 checkOtherVars :: [Substitution] -> [Term] -> Bool
 checkOtherVars subs [] = True
 checkOtherVars subs (v:vars) = case tv of
-      Just x      -> (checkOtherVars subs vars)
-      Nothing     -> False
-    where
-      tv = lookup v subs
+    Just x      -> (checkOtherVars subs vars)
+    Nothing     -> False
+  where
+    tv = lookup v subs
 
 getRestVars :: Query -> Query -> [Term]
 getRestVars query expandedquery
-    | dropWhile (containedinQuery query) expandedquery == []              = []
-    | otherwise                                                           = getRestVarsH query expandedquery
-
+    | u == []                                                             = []
+    | otherwise                                                           = getRestVarsH query u
+      where
+        u = filter (notcontainedinQuery query) expandedquery
 getRestVarsH :: Query -> Query -> [Term]
 getRestVarsH query [] = []
-getRestVarsH query expandedquery = [w] ++ (getRestVarsH query v)
+getRestVarsH query expandedquery = [z] ++ (getRestVarsH w x)
   where
-    v = dropWhile (containedinQuery query) expandedquery
-    w = getVarTerm expandedquery
+    w = [getVarTerm expandedquery] ++ query
+    z = getTermofAtom $ getVarTerm expandedquery
+    x = filter (  notcontainedinQuery w) expandedquery
 
-getVarTerm :: Query -> Term
+
+getTermofAtom :: Atom -> Term
+getTermofAtom (Predicate p t) = t
+
+getVarTerm :: Query -> Atom
 getVarTerm [] = error "Should not happen, getVar Term "
 getVarTerm (q:query) = case q of
-  (Predicate p (Var x)) -> (Var x)
+  (Predicate p (Var x)) -> (Predicate p (Var x))
   (Predicate q (Const a)) -> getVarTerm query
 
-containedinQuery :: Query -> Atom -> Bool
-containedinQuery [] (Predicate p t) = False
-containedinQuery ((Predicate p1 t1):query) (Predicate p t)
-      | t == t1           = True
-      | otherwise         = containedinQuery query (Predicate p t)
-
-testRestVars = (sortQueryVars $ filterVars [(Predicate A1 (Var "X")), (Predicate A1 (Var "Y"))])
-
+notcontainedinQuery :: Query -> Atom -> Bool
+notcontainedinQuery [] (Predicate p t) = True
+notcontainedinQuery ((Predicate p1 t1):query) (Predicate p t)
+    | t == t1           = False
+    | otherwise         = notcontainedinQuery query (Predicate p t)
 
 getVarName :: Query -> String
 getVarName [] = error "Should not happen, getVar Term"
 getVarName (q:query) = case q of
-  (Predicate p (Var x)) -> x
-  (Predicate q (Const a)) -> getVarName query
+    (Predicate p (Var x)) -> x
+    (Predicate q (Const a)) -> getVarName query
 
 intersectSubstitutions :: Program -> Query -> [Substitution]
 intersectSubstitutions program query = v
@@ -207,21 +188,17 @@ equalOrDifferentVar (Var x, Const a) (Var y, Const b)
     | x /= y            = True
     | otherwise         = False
 
-
-
 filterVars :: Query -> Query
 filterVars [] = []
 filterVars (q:query) = case q of
-  (Predicate p (Var x)) -> q : (filterVars query)
-  (Predicate q (Const a)) -> filterVars query
-
-
+    (Predicate p (Var x)) -> q : (filterVars query)
+    (Predicate q (Const a)) -> filterVars query
 
 checkforVar :: Query -> Bool
 checkforVar [] = False
 checkforVar (x:xs) = case x of
-      (Predicate p (Var y)) -> True
-      (Predicate q (Const a)) -> checkforVar xs
+    (Predicate p (Var y)) -> True
+    (Predicate q (Const a)) -> checkforVar xs
 
 paste :: Query -> [Query] -> [Query]
 paste a [] = []
@@ -232,24 +209,22 @@ pasteAll [] b = []
 pasteAll (x:a) b = (paste x b) ++ (pasteAll a b)
 
 expand :: Program -> Query -> [Query]
-expand program query = go program $ expandQueryv2 program query
+expand program query = expandComplete program $ expandQuery program query
 
-go :: Program -> [Query] -> [Query]
-go program queries
-  | u == v = u
-  | otherwise  = go program u
-   where
-     u = concat $ map (expandQueryv2 program) queries
-     v = concat $ map (expandQueryv2 program) u
+expandComplete :: Program -> [Query] -> [Query]
+expandComplete program queries
+    | u == v = u
+    | otherwise  = expandComplete program u
+     where
+       u = concat $ map (expandQuery program) queries
+       v = concat $ map (expandQuery program) u
 
 
-expandQueryv2 :: Program -> Query -> [[Atom]]
-expandQueryv2 program []        = []
-expandQueryv2 program (x:query) = foldl (pasteAll) (expandAtomv2 program x) (map (expandAtomv2 program) query)
--- expandQueryv2 program (x:query) = [(expandAtomv2 program x)] ++ (expandQueryv2 program query)
+expandQuery :: Program -> Query -> [[Atom]]
+expandQuery program (x:query) = foldl (pasteAll) (expandAtom program x) (map (expandAtom program) query)
 
-expandAtomv2 :: Program -> Atom -> [[Atom]]
-expandAtomv2 program (Predicate p t)
+expandAtom :: Program -> Atom -> [[Atom]]
+expandAtom program (Predicate p t)
     | v == []           = [[(Predicate p t)]]
     | otherwise         = v
       where
@@ -260,13 +235,17 @@ expandAtomv2 program (Predicate p t)
 refactorClause :: Atom -> Clause -> Clause
 refactorClause (Predicate p t ) (Predicate p2 t2, xs) = (Predicate p2 t, u)
   where
-    u = map (refactorAtom (Predicate p t)) xs
+    u = map (refactorAtom (Predicate p t) (Predicate p2 t2)) xs
+
+refactorAtom :: Atom -> Atom -> Atom -> Atom
+refactorAtom (Predicate p t) (Predicate p1 t1) (Predicate p2 t2)
+    | t1 == t2          = (Predicate p2 t)
+    | otherwise         = (Predicate p2 t2)
 
 
-refactorAtom :: Atom -> Atom -> Atom
-refactorAtom (Predicate p t) (Predicate p1 t1) = (Predicate p1 t)
 
 -- Tests
+testRestVars = (sortQueryVars $ filterVars [(Predicate A1 (Var "X")), (Predicate A1 (Var "Y"))])
 
 substituteTest = (<==) (Var "X", Const "a") (Predicate A0 (Var "X"))
 
@@ -279,7 +258,7 @@ testProgram = [((Predicate A0 (Const "b")),[]),
               ((Predicate A0 (Const "c")),[]),
               ((Predicate A1 (Const "a")),[]),
               ((Predicate A1 (Const "b")),[]),
-              ((Predicate A2 (Var "X")),[(Predicate A1 (Var "X"))]),
+              ((Predicate A2 (Var "X")),[(Predicate A0 (Var "Y")),(Predicate A0 (Var "X")),(Predicate B1 (Var "Y"))]),
               ((Predicate A2 (Var "X")),[(Predicate A0 (Var "X"))]),
               ((Predicate B0 (Var "X")),[(Predicate A1 (Var "X")), (Predicate A0 (Const "a"))]),
               ((Predicate B0 (Var "X")),[(Predicate A1 (Var "X"))]),
