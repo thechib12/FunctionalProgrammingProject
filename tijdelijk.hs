@@ -95,13 +95,13 @@ evaluator program (q:query)
 evaluatorAtom :: Program -> Atom -> [Atom]
 evaluatorAtom program atom = [ btom | (btom,btoms)<- program, btom == atom , btoms ==[]]
 
-evalOne :: Program -> Query -> Either Bool [Substitution]
-evalOne program query
-    | checkforVar query == True         = Right u
-    | otherwise                         = Left v
-    where
-      u = []
-      v = True
+-- evalOne :: Program -> Query -> Either Bool [Substitution]
+-- evalOne program query
+--     | checkforVar query == True         = Right u
+--     | otherwise                         = Left v
+--     where
+--       u = []
+--       v = True
 
 evalBool :: Program -> Substitution -> Query -> [Query] -> Bool
 evalBool program sub originalquery [] = False
