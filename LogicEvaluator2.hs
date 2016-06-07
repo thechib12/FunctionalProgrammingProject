@@ -1,10 +1,10 @@
-import Data.Maybe
-import Data.Either
-import FPPrac.Trees
-import Data.List
-import Data.Function
+import           Data.Either
+import           Data.Function
+import           Data.List
+import           Data.Maybe
+import           FPPrac.Trees
 -- Data types
-data Pred = A0 | A1 | A2 | B0 | B1 | B2 | C0 | C1 | D | P | Q |R
+data Pred = A0 | A1 | A2 | B0 | B1 | B2 | C0 | C1 | D | P | Q |R | S
             deriving (Eq, Show)
 
 data Term = Var String
@@ -144,6 +144,12 @@ getVarTerm (q:query) = case q of
   (Predicate p (Var x)) -> (Predicate p (Var x))
   (Predicate q (Const a)) -> getVarTerm query
 
+containedinQuery :: Query -> Atom -> Bool
+containedinQuery [] (Predicate p t) = False
+containedinQuery ((Predicate p1 t1):query) (Predicate p t)
+    | t == t1           = True
+    | otherwise         = containedinQuery query (Predicate p t)
+
 notcontainedinQuery :: Query -> Atom -> Bool
 notcontainedinQuery [] (Predicate p t) = True
 notcontainedinQuery ((Predicate p1 t1):query) (Predicate p t)
@@ -233,16 +239,23 @@ expandAtom program (Predicate p t)
         v = map (snd ) w
 
 refactorClause :: Atom -> Clause -> Clause
-refactorClause (Predicate p t ) (Predicate p2 t2, xs) = (Predicate p2 t, u)
+refactorClause (Predicate p t ) ((Predicate p2 t2), xs) = (Predicate p2 t, u ++ v )
   where
-    u = map (refactorAtom (Predicate p t) (Predicate p2 t2)) xs
+    a = filter (notcontainedinQuery [(Predicate p2 t2)]) xs
+    b = filter (containedinQuery [(Predicate p2 t2)]) xs
+    u = map (refactorAtom (Predicate p t) (Predicate p2 t2)) b
+    v = map (changeName (Predicate p t)) a
 
 refactorAtom :: Atom -> Atom -> Atom -> Atom
 refactorAtom (Predicate p t) (Predicate p1 t1) (Predicate p2 t2)
     | t1 == t2          = (Predicate p2 t)
     | otherwise         = (Predicate p2 t2)
 
-
+changeName :: Atom -> Atom -> Atom
+changeName _ (Predicate q (Const y)) = (Predicate q (Const y))
+changeName (Predicate p (Var x)) (Predicate q (Var y))
+    | x == y            = (Predicate q (Var (y ++ "1")))
+    | otherwise         = (Predicate q (Var y))
 
 -- Tests
 testRestVars = (sortQueryVars $ filterVars [(Predicate A1 (Var "X")), (Predicate A1 (Var "Y"))])
@@ -259,7 +272,6 @@ testProgram = [((Predicate A0 (Const "b")),[]),
               ((Predicate A1 (Const "a")),[]),
               ((Predicate A1 (Const "b")),[]),
               ((Predicate A2 (Var "X")),[(Predicate A0 (Var "Y")),(Predicate A0 (Var "X")),(Predicate B1 (Var "Y"))]),
-              ((Predicate A2 (Var "X")),[(Predicate A0 (Var "X"))]),
               ((Predicate B0 (Var "X")),[(Predicate A1 (Var "X")), (Predicate A0 (Const "a"))]),
               ((Predicate B0 (Var "X")),[(Predicate A1 (Var "X"))]),
               ((Predicate B2 (Var "X")),[(Predicate B1 (Var "X")), (Predicate B0 (Var "X"))]),
@@ -274,18 +286,34 @@ sampleProgram = [((Predicate P (Const "a")),[]),
                 ((Predicate R (Var "X")),[(Predicate P (Var "X")), (Predicate Q (Var "X"))])
                 ]
 
+gijsEnRonProgram = [
+                    (Predicate P (Const "a"), []),
+                    (Predicate P (Const "b"), []),
+                    (Predicate P (Const "c"), []),
+                    (Predicate Q (Const "a"), []),
+                    (Predicate Q (Const "b"), []),
+                    (Predicate Q (Const "d"), []),
+                    (Predicate P (Const "d"), [(Predicate Q (Const "b")), (Predicate P (Const "c"))]),
+                    (Predicate R (Const "d"), []),
+                    (Predicate R (Var "V"), [(Predicate P (Var "V"))]),
+                    (Predicate R (Var "Y"), [(Predicate P (Var "X")), (Predicate Q (Var "Y"))]),
+                    (Predicate S (Var "X"), [(Predicate P (Var "X")), (Predicate Q (Var "X"))])
+                    ]
+-- 1.true
+gijsEnRonQuery = [(Predicate R (Const "a"))]
 
-testRHS = [(Predicate A1 (Var "X")), (Predicate A2 (Var "Y"))]
+-- 1.X=a,b Y=a,b,c 2.true 3.false 4.false 5.X=a 6.X=a 7.X=a,b 8.X=a,b 9.Y=a,b,c
 query1 = [(Predicate A1 (Var "X")), (Predicate A2 (Var "Y"))]
 query2 = [(Predicate B2 (Const "a"))]
 query3 = [(Predicate B2 (Const "c"))]
 query4 = [(Predicate B1 (Const "b"))]
 query5 = [(Predicate B2 (Var "X"))]
-query8 = [(Predicate B0 (Var "Y"))]
 query6 = [(Predicate B1 (Var "X")), (Predicate B2 (Var "X"))]
 query7 = [(Predicate B0 (Var "X")), (Predicate B0 (Var "X"))]
-testSub = (Var "X", Const "a")
+query8 = [(Predicate B0 (Var "Y"))]
+query9 = [(Predicate A2 (Var "Y"))]
 
+-- 1.true 2.true 3.false 4.X=a,b
 sampleQuery1 = [(Predicate R (Const "a"))]
 sampleQuery2 = [(Predicate R (Const "b"))]
 sampleQuery3 = [(Predicate R (Const "c"))]
