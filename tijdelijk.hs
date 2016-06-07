@@ -2,6 +2,7 @@ import Data.Maybe
 import Data.Either
 import FPPrac.Trees
 import Data.List
+import Data.Function
 
 -- Data types
 data Pred = A0 | A1 | A2 | B0 | B1 | B2 | C0 | C1 | D | Begin
@@ -20,6 +21,8 @@ data AtomTree = AtomNode OpType Atom [AtomTree]
 data OpType = Union
             | Inter
 
+instance Ord Term where
+  compare (Var x) (Var y) = compare x y
 
 instance Show Atom where
   show (Predicate p t ) = show(p) ++ " " ++  show(t)
@@ -48,7 +51,7 @@ instance Substitute Term where
 instance Substitute Atom where
   (<==) sub (Predicate p t)           = (Predicate p ((<==) sub t))
 
-substituteQuery :: Substitution -> [Atom] -> [Atom]
+substituteQuery :: Substitution -> Query -> Query
 substituteQuery sub xs                  = u
       where
         u = map ((<==) sub) xs
@@ -73,19 +76,128 @@ renameRHS ((Predicate a (Var t)):xs) ys
         | otherwise                     = [(Predicate a (Var t))] ++ (renameRHS xs ys)
 
 -- Unifying functions
-unify:: Atom -> Program -> [Substitution]
-unify (Predicate p (Var x)) program
+unify::  Program -> Atom -> [Substitution]
+unify program (Predicate p (Var x))
         | u /= []         = zip (repeat (Var x)) u
         | otherwise       = []
   where
     u = [ (Const y) | ((Predicate q (Const y)), atoms) <- program, p == q ]
 
 
+evaluator :: Program -> Query -> [Atom]
+evaluator program [] = []
+evaluator program (q:query)
+    | u /= []               = []++(evaluator program query)
+    | otherwise             = [q] ++ (evaluator program query)
+      where
+        u = evaluatorAtom program q
+
+evaluatorAtom :: Program -> Atom -> [Atom]
+evaluatorAtom program atom = [ btom | (btom,btoms)<- program, btom == atom , btoms ==[]]
+
+--  voeg externe variabelen unification toe
+evalBool :: Program -> Substitution -> Query -> [Query] -> Bool
+evalBool program sub originalquery [] = False
+evalBool program sub originalquery (q:querys)
+  | elem sub w == True             = True
+  | otherwise                       = evalBool program sub originalquery querys
+    where
+      u = getRestVars originalquery (sortQueryVars q)
+      v = intersectSubstitutions program q
+      w = removeOtherVars (u) v
 
 
+evalSub :: Program -> Query -> [Query] -> [Substitution]
+evalSub program originalquery [] = []
+evalSub program originalquery (q:queries)
+  | w /= []                         = w ++ (evalSub program originalquery queries)
+  | otherwise                       = evalSub program  originalquery queries
+  where
+    u = getRestVars originalquery (sortQueryVars q)
+    v = intersectSubstitutions program q
+    w = removeOtherVars (u) v
+
+removeOtherVars :: [Term] -> [Substitution] ->  [Substitution]
+removeOtherVars terms []                = []
+removeOtherVars terms (s:subs)
+    | elem (fst(s)) terms == True       = removeOtherVars terms subs
+    | otherwise                         = s : (removeOtherVars terms (subs))
 
 
+checkOtherVars :: [Substitution] -> [Term] -> Bool
+checkOtherVars subs [] = True
+checkOtherVars subs (v:vars) = case tv of
+      Just x      -> (checkOtherVars subs vars)
+      Nothing     -> False
+    where
+      tv = lookup v subs
 
+getRestVars query expandedquery
+    | dropWhile (equalAtomVar (getVarName query)) expandedquery == [] = []
+    | otherwise   = getRestVarsH query expandedquery
+
+getRestVarsH :: Query -> Query -> [Term]
+getRestVarsH query [] = []
+getRestVarsH query expandedquery = [w] ++ (getRestVarsH query v)
+  where
+    v = dropWhile (equalAtomVar (getVarName query)) expandedquery
+    w = getVarTerm expandedquery
+
+getVarTerm :: Query -> Term
+getVarTerm [] = error "Should not happen"
+getVarTerm (q:query) = case q of
+  (Predicate p (Var x)) -> (Var x)
+  (Predicate q (Const a)) -> getVarTerm query
+
+getVarName :: Query -> String
+getVarName [] = error "Should not happen"
+getVarName (q:query) = case q of
+  (Predicate p (Var x)) -> x
+  (Predicate q (Const a)) -> getVarName query
+
+intersectSubstitutions :: Program -> Query -> [Substitution]
+intersectSubstitutions program query = v
+  where
+    u = unifyQueries (program) $ separate $ sortQueryVars $ filterVars query
+    v = concat ( map (intersectVars) u)
+
+
+sortQueryVars :: Query -> Query
+sortQueryVars query = sortBy (compare `on` (\(Predicate p (Var x)) -> x)) query
+
+separate :: Query -> [Query]
+separate [] = []
+separate ((Predicate p (Var x)):query) = [u] ++ (separate v)
+  where
+    u = (Predicate p (Var x)) : (takeWhile (equalAtomVar x) query)
+    v = dropWhile (equalAtomVar x) query
+
+equalAtomVar :: String -> Atom -> Bool
+equalAtomVar x (Predicate _ (Var y)) = x == y
+
+notequalAtomVar :: String -> Atom -> Bool
+notequalAtomVar x (Predicate _ (Var y)) = x /= y
+
+unifyQueries :: Program -> [Query] -> [[[Substitution]]]
+unifyQueries program queries = map (map (unify program)) queries
+
+intersectVars :: [[Substitution]]  -> [Substitution]
+intersectVars (x:subs) = foldl (intersectBy (equalOrDifferentVar)) x subs
+
+equalOrDifferentVar :: Substitution -> Substitution -> Bool
+equalOrDifferentVar (Var x, Const a) (Var y, Const b)
+    | x == y && a == b  = True
+    | x /= y            = True
+    | otherwise         = False
+
+-- separateVars :: Query -> [Query]
+
+
+filterVars :: Query -> Query
+filterVars [] = []
+filterVars (q:query) = case q of
+  (Predicate p (Var x)) -> q : (filterVars query)
+  (Predicate q (Const a)) -> filterVars query
 
 
 
@@ -93,7 +205,7 @@ unify (Predicate p (Var x)) program
 
 substituteTest = (<==) (Var "X", Const "a") (Predicate A0 (Var "X"))
 
-testUnify = unify (Predicate A0 (Var "X")) testProgram
+testUnify = unify testProgram (Predicate A0 (Var "X"))
 
 renameTest = renameClause ((Predicate A0 (Var "Y")), [(Predicate B0 (Var "X")),(Predicate B1 (Var "Y"))]) [(Var "X")]
 
