@@ -178,12 +178,11 @@ deriveConstants (AtomNode Inter atom (xs)) = case atom of
          where
            x = head xs
            z = tail xs
+           
            u = foldl (intersect) (deriveConstants x) (map deriveConstants z)
       (Predicate q (Const a)) -> [(Const a)]
 
-evalOne
-
-
+getMapping (AtomNode Op ())
 --
 -- evalOne :: Program -> Query -> Either Bool [Substitution]
 -- evalOne prog query
@@ -232,3 +231,4 @@ testProgram = [((Predicate A0 (Const "b")),[]),
 testRHS = [(Predicate A1 (Var "X")), (Predicate A2 (Var "Y"))]
 testQuery = [(Predicate A2 (Var "X")) ]
 testSub = (Var "X", Const "a")
+showQueryTree = showRoseTree (ppTree ( makeTree testProgram testQuery ( Predicate Begin ( Var "X"))))
