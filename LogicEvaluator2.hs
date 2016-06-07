@@ -4,7 +4,7 @@ import FPPrac.Trees
 import Data.List
 import Data.Function
 -- Data types
-data Pred = A0 | A1 | A2 | B0 | B1 | B2 | C0 | C1 | D | Begin
+data Pred = A0 | A1 | A2 | B0 | B1 | B2 | C0 | C1 | D | P | Q |R
             deriving (Eq, Show)
 
 data Term = Var String
@@ -142,15 +142,16 @@ checkOtherVars subs (v:vars) = case tv of
     where
       tv = lookup v subs
 
+getRestVars :: Query -> Query -> [Term]
 getRestVars query expandedquery
-    | dropWhile (equalAtomVar (getVarName query)) expandedquery == [] = []
-    | otherwise   = getRestVarsH query expandedquery
+    | dropWhile (containedinQuery query) expandedquery == []              = []
+    | otherwise                                                           = getRestVarsH query expandedquery
 
 getRestVarsH :: Query -> Query -> [Term]
 getRestVarsH query [] = []
 getRestVarsH query expandedquery = [w] ++ (getRestVarsH query v)
   where
-    v = dropWhile (equalAtomVar (getVarName query)) expandedquery
+    v = dropWhile (containedinQuery query) expandedquery
     w = getVarTerm expandedquery
 
 getVarTerm :: Query -> Term
@@ -158,6 +159,15 @@ getVarTerm [] = error "Should not happen, getVar Term "
 getVarTerm (q:query) = case q of
   (Predicate p (Var x)) -> (Var x)
   (Predicate q (Const a)) -> getVarTerm query
+
+containedinQuery :: Query -> Atom -> Bool
+containedinQuery [] (Predicate p t) = False
+containedinQuery ((Predicate p1 t1):query) (Predicate p t)
+      | t == t1           = True
+      | otherwise         = containedinQuery query (Predicate p t)
+
+testRestVars = (sortQueryVars $ filterVars [(Predicate A1 (Var "X")), (Predicate A1 (Var "Y"))])
+
 
 getVarName :: Query -> String
 getVarName [] = error "Should not happen, getVar Term"
@@ -197,7 +207,6 @@ equalOrDifferentVar (Var x, Const a) (Var y, Const b)
     | x /= y            = True
     | otherwise         = False
 
--- separateVars :: Query -> [Query]
 
 
 filterVars :: Query -> Query
@@ -205,142 +214,6 @@ filterVars [] = []
 filterVars (q:query) = case q of
   (Predicate p (Var x)) -> q : (filterVars query)
   (Predicate q (Const a)) -> filterVars query
-
-
-
-
-
-
-
--- getRHS :: Atom -> Program -> Maybe [Atom]
--- getRHS n []             = Nothing
--- getRHS n ((x,ys):xs)
---         | n == x        = Just ys
---         | otherwise     = getRHS n xs
---
--- hasEmptyList:: Program -> Bool
--- hasEmptyList [] = False
--- hasEmptyList (((Predicate p x), rules):xs)
---         | rules == [] = True
---         | otherwise = False
---
--- getRuleOfClause :: Clause -> [Atom]
--- getRuleOfClause (x,xs) = xs
---
--- getRulesOfProgram :: Program -> [[Atom]]
--- getRulesOfProgram xs = map (getRuleOfClause) xs
---
---
--- getTerminalConstants :: Program -> [[Atom]]
--- getTerminalConstants [] = []
--- getTerminalConstants (((Predicate p x), rules):xs)
---         | rules == [] = [(Predicate p x)] : getTerminalConstants xs
---         | otherwise   = getTerminalConstants xs
---
---
---
--- findRule:: Program -> Atom -> Program
--- findRule [] _ = []
--- findRule (((Predicate p x), rules):xs) (Predicate q z) = case z of
---       Var u
---         | q == p              -> [((Predicate p x), rules)] ++ ( findRule xs (Predicate q z))
---         | otherwise           -> findRule xs (Predicate q z)
---
---       Const a
---         | q == p && x == z    -> [((Predicate p x), rules)] ++ (findRule xs (Predicate q z))
---         | otherwise           -> findRule xs (Predicate q z)
---
--- evaluateAtom :: Program -> Atom -> Either [[Atom]] Bool
--- evaluateAtom prog atom = case atom of
---       (Predicate p (Const a))
---         | terminationrule == True   -> Right True
---         | u == []                   -> Right False
---         | otherwise                 -> Left v
---           where
---             v = getRulesOfProgram u
---
---       (Predicate q (Var x))
---         | terminationrule == True   -> Left w
---         | u == []                   -> Right False
---         | otherwise                 -> Left v
---           where
---             v = getRulesOfProgram u
---             w = getTerminalConstants u
---     where
---       u = findRule prog atom
---       terminationrule = hasEmptyList u
---
---
--- makeTree prog query atom = AtomNode Inter atom (map (makeTreeH prog) query)
---
--- makeTreeH prog atom = AtomNode Union atom v
---   where
---     u = findRule prog atom
---     v = findRuleTree prog u
---
--- class PPTree a where
---   ppTree :: a -> RoseTree
---
--- instance PPTree AtomTree where
---   ppTree (AtomNode op atom xs) = RoseNode (show(atom) ++ show(op)) u
---     where
---       u = map (ppTree) xs
---
---
--- findRuleTree :: Program -> Program -> [AtomTree]
--- findRuleTree prog [] = []
--- findRuleTree prog ((x,xs):ys)  = [makeTree prog xs x] ++ (findRuleTree prog ys)
---
--- deriveConstants :: AtomTree -> [Term]
--- deriveConstants (AtomNode Union atom xs) = case atom of
---       (Predicate p (Var x)) -> u
---          where
---            u = concat (map deriveConstants xs)
---       (Predicate q (Const a)) -> [(Const a)]
---
--- deriveConstants (AtomNode Inter atom (xs)) = case atom of
---       (Predicate p (Var y)) -> u
---          where
---            x = head xs
---            z = tail xs
---
---            u = foldl (intersect) (deriveConstants x) (map deriveConstants z)
---       (Predicate q (Const a)) -> [(Const a)]
-
-
-
--- expands a query, which returns for every atom in the query a list of expanded atoms.
--- expandQuery:: Program -> Program -> Query -> [[[Atom]]]
--- expandQuery prog prog2 query = map (expandAtom prog prog2) query
---
--- -- expands the atom. If the right LHS is found, then get the right RHS by expanding every atom.
--- -- expandAtom:: Program -> Program -> Atom -> [[Atom]]
--- expandAtom [] _ (Predicate q y) = []
--- expandAtom ((Predicate p x, xs):xxs) prog2 (Predicate q y) = case (Predicate p x) of
---   (Predicate p' (Const x'))
---     | p == q  -> [[(Predicate p' (Const x'))]] ++ (expandAtom xxs prog2 (Predicate q y))
---     | otherwise ->  (expandAtom xxs prog2 (Predicate q y))
---   (Predicate p1 (Var x1))
---     | p == q             ->   [(filterNonEmptyLists prog2 xs )] ++  (concat (expandQuery prog2 prog2 (filterEmptyLists prog2 xs))) ++ (expandAtom xxs prog2 (Predicate q y))
---     | otherwise          ->   expandAtom xxs prog2 (Predicate q y)
---
--- -- -- [(Predicate p (Const (show(p)++ show (q))))]++
--- filterEmptyLists:: Program -> [Atom] -> [Atom]
--- filterEmptyLists _ [] = []
--- filterEmptyLists prog (x:xs)
---     | expandedHasEmptyList  prog x = filterEmptyLists prog  xs
---     | otherwise = [x] ++ filterEmptyLists prog  xs
--- filterNonEmptyLists:: Program -> [Atom] -> [Atom]
--- filterNonEmptyLists _ [] = []
--- filterNonEmptyLists prog (x:xs)
---     | not (expandedHasEmptyList prog x) = filterNonEmptyLists prog  xs
---     | otherwise = [x] ++ filterNonEmptyLists prog  xs
---
--- expandedHasEmptyList:: Program -> Atom -> Bool
--- expandedHasEmptyList [] _ = False
--- expandedHasEmptyList ((Predicate p x, xs):xxs) (Predicate q y)
---     | p == q && xs == [] = True
---     | otherwise = expandedHasEmptyList xxs (Predicate q y)
 
 
 
@@ -370,7 +243,6 @@ go program queries
      v = concat $ map (expandQueryv2 program) u
 
 
-
 expandQueryv2 :: Program -> Query -> [[Atom]]
 expandQueryv2 program []        = []
 expandQueryv2 program (x:query) = foldl (pasteAll) (expandAtomv2 program x) (map (expandAtomv2 program) query)
@@ -378,19 +250,21 @@ expandQueryv2 program (x:query) = foldl (pasteAll) (expandAtomv2 program x) (map
 
 expandAtomv2 :: Program -> Atom -> [[Atom]]
 expandAtomv2 program (Predicate p t)
-    | u == []           = [[(Predicate p t)]]
-    | otherwise         = u
+    | v == []           = [[(Predicate p t)]]
+    | otherwise         = v
       where
-        u = [atoms | ((Predicate q (Var x)),atoms) <- program, atoms /= [], p == q]
+        u = [((Predicate q (Var x)),atoms) | ((Predicate q (Var x)),atoms) <- program, atoms /= [], p == q]
+        w = map (refactorClause (Predicate p t)) u
+        v = map (snd ) w
 
-refactorVarlist :: Term -> [[Atom]] -> [[Atom]]
-refactorVarlist term atoms  = map (refactorVar term) atoms
+refactorClause :: Atom -> Clause -> Clause
+refactorClause (Predicate p t ) (Predicate p2 t2, xs) = (Predicate p2 t, u)
+  where
+    u = map (refactorAtom (Predicate p t)) xs
 
-refactorVar ::  Term -> [Atom] -> [Atom]
-refactorVar term [] = []
-refactorVar term (atom:atoms) = case atom of
-      (Predicate p (Var x)) -> (Predicate p term) : (refactorVar term atoms)
-      (Predicate p (Const a)) -> atom : (refactorVar term atoms)
+
+refactorAtom :: Atom -> Atom -> Atom
+refactorAtom (Predicate p t) (Predicate p1 t1) = (Predicate p1 t)
 
 -- Tests
 
@@ -405,23 +279,35 @@ testProgram = [((Predicate A0 (Const "b")),[]),
               ((Predicate A0 (Const "c")),[]),
               ((Predicate A1 (Const "a")),[]),
               ((Predicate A1 (Const "b")),[]),
-              ((Predicate A2 (Var "X")),[(Predicate A1 (Var "X")) ]),
-              ((Predicate A2 (Var "X")),[(Predicate A0 (Var "X")), (Predicate A1 (Var "Y")), (Predicate A1 (Var "Y"))]),
+              ((Predicate A2 (Var "X")),[(Predicate A1 (Var "X"))]),
+              ((Predicate A2 (Var "X")),[(Predicate A0 (Var "X"))]),
               ((Predicate B0 (Var "X")),[(Predicate A1 (Var "X")), (Predicate A0 (Const "a"))]),
               ((Predicate B0 (Var "X")),[(Predicate A1 (Var "X"))]),
               ((Predicate B2 (Var "X")),[(Predicate B1 (Var "X")), (Predicate B0 (Var "X"))]),
               ((Predicate B1 (Const "a")),[])
-
               ]
 
--- b2 x -> [b1x, b0x] -> [b1a, a2x, a0a, a]
+sampleProgram = [((Predicate P (Const "a")),[]),
+                ((Predicate P (Const "b")),[]),
+                ((Predicate P (Const "c")),[]),
+                ((Predicate Q (Const "a")),[]),
+                ((Predicate Q (Const "b")),[]),
+                ((Predicate R (Var "X")),[(Predicate P (Var "X")), (Predicate Q (Var "X"))])
+                ]
+
+
 testRHS = [(Predicate A1 (Var "X")), (Predicate A2 (Var "Y"))]
 query1 = [(Predicate A1 (Var "X")), (Predicate A2 (Var "Y"))]
 query2 = [(Predicate B2 (Const "a"))]
 query3 = [(Predicate B2 (Const "c"))]
 query4 = [(Predicate B1 (Const "b"))]
 query5 = [(Predicate B2 (Var "X"))]
-query8 = [(Predicate B0 (Var "X"))]
+query8 = [(Predicate B0 (Var "Y"))]
 query6 = [(Predicate B1 (Var "X")), (Predicate B2 (Var "X"))]
 query7 = [(Predicate B0 (Var "X")), (Predicate B0 (Var "X"))]
 testSub = (Var "X", Const "a")
+
+sampleQuery1 = [(Predicate R (Const "a"))]
+sampleQuery2 = [(Predicate R (Const "b"))]
+sampleQuery3 = [(Predicate R (Const "c"))]
+sampleQuery4 = [(Predicate R (Var "X"))]
