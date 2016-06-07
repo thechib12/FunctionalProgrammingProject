@@ -300,7 +300,8 @@ gijsEnRonProgram = [
                     (Predicate S (Var "X"), [(Predicate P (Var "X")), (Predicate Q (Var "X"))])
                     ]
 -- 1.true
-gijsEnRonQuery = [(Predicate R (Const "a"))]
+gijsEnRonQuery1 = [(Predicate R (Const "a"))]
+gijsEnRonQuery2 = [(Predicate R (Var "X"))]
 
 -- 1.X=a,b Y=a,b,c 2.true 3.false 4.false 5.X=a 6.X=a 7.X=a,b 8.X=a,b 9.Y=a,b,c
 query1 = [(Predicate A1 (Var "X")), (Predicate A2 (Var "Y"))]

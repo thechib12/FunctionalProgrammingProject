@@ -13,7 +13,7 @@ Usage :
 
 Level 2 is implemented in `LogicEvaluator2.hs`. Level 2 is far more complex. The program follows the following ideas:
 
-1. Determine if the query contains a variable. The result of the program is a `Bool` if there is no variable in the query and the result is a list of `Substitution`.
+1. Determine if the query contains a variable. The result of the program is a `Left Bool` if there is no variable in the query and the result is `Right [Substitution]` which is a list of substitutions.
 2. Expand the given query with the rules in the program. Expanding is halted when a given predicate has only constant derivatives, so it preserves the variable names. The result will be a list of queries, since some predicates have more than one rule and the program has the examine all rules.
 3. Unify will give all substitutions for every predicate.
 4. All unifications will be intersected for each variable in the expanded query. The result of this technique is a list of all substitutions that will hold for each predicate in the query.
