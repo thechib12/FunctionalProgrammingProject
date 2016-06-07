@@ -3,7 +3,7 @@
 This is a short explanation for the Functional Programming Project by Christiaan van den Bogaard & Rogier Monshouwer found at https://github.com/thechib12/FunctionalProgrammingProject
 
 ## Level 1
-Level 1 is implemented in `LogicEvaluator.hs`. The program `evalProp` will check for each predicate if it is true or when it does not have a truth value and has a deriving right hand side rule, it will check for each predicate in that rule for a truth value or for a deriving right hand side.
+Level 1 is implemented in `LogicEvaluator.hs`. The program `evalProp` will check for each predicate if it is true and when it does not have a truth value, it will check for each predicate in the deriving rule for a truth value or for a deriving right hand side. If no rule or truth value is found, the query is false.
 
 Usage :
 
