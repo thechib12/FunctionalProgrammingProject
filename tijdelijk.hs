@@ -46,7 +46,7 @@ instance Substitute Term where
   (<==) (Var y, Const a) (Var x)
                   | x == y            = (Const a)
                   | otherwise         = (Var x)
-  (<==) (Var x,Const b) (Const a)     = (Const a)
+  (<==) (Var x, Const b) (Const a)     = (Const a)
 
 instance Substitute Atom where
   (<==) sub (Predicate p t)           = (Predicate p ((<==) sub t))
@@ -95,7 +95,14 @@ evaluator program (q:query)
 evaluatorAtom :: Program -> Atom -> [Atom]
 evaluatorAtom program atom = [ btom | (btom,btoms)<- program, btom == atom , btoms ==[]]
 
---  voeg externe variabelen unification toe
+evalOne :: Program -> Query -> Either Bool [Substitution]
+evalOne program query
+    | checkforVar query == True         = Right u
+    | otherwise                         = Left v
+    where
+      u = []
+      v = True
+
 evalBool :: Program -> Substitution -> Query -> [Query] -> Bool
 evalBool program sub originalquery [] = False
 evalBool program sub originalquery (q:querys)
