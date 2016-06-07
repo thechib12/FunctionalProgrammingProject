@@ -201,7 +201,7 @@ deriveConstants (AtomNode Inter atom (xs)) = case atom of
 -- boolHelper prog clause atom = case atom of
 --   (Predicate p (Var x))
 --     |
---
+  --
 --   Predicate q (Const a)
 --
 --
@@ -218,7 +218,8 @@ expandAtom [] _ (Predicate q y) = []
 expandAtom ((Predicate p x, xs):xxs) prog2 (Predicate q y) = case (Predicate p x) of
   (Predicate p' (Const x')) -> expandAtom xxs prog2 (Predicate q y)
   (Predicate p1 (Var x1))
-    | p == q                -> ( (concat (expandQuery prog2 prog2 xs))) ++ (expandAtom xxs prog2   (Predicate q y))
+    | p == q && (expandedHasEmptyList prog2 (Predicate p x))   ->  [(Predicate p x)] ++ (expandAtom xxs prog2  (Predicate q y))
+    | p == q                                                   ->  (concat (expandQuery prog2 prog2 xs)) ++ (expandAtom xxs prog2 (Predicate q y))
     | otherwise             ->  expandAtom xxs prog2 (Predicate q y)
 
 
