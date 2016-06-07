@@ -110,5 +110,10 @@ testProgram = [((Predicate A0 (Const "b")),[]),
 
               ]
 testRHS = [(Predicate A1 (Var "X")), (Predicate A2 (Var "Y"))]
-testQuery = [(Predicate A2 (Var "X")) ]
+query1 = [(Predicate A1 (Var "X")), (Predicate A2 (Var "Y"))]
+query2 = [(Predicate B2 (Const "a"))]
+query3 = [(Predicate B2 (Const "c"))]
+query4 = [(Predicate B1 (Const "b"))]
+query5 = [(Predicate B2 (Var "X"))]
+query6 = [(Predicate B1 (Var "X")), (Predicate B2 (Var "X"))]
 testSub = (Var "X", Const "a")
